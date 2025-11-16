@@ -14,80 +14,93 @@ import AdminPage from './pages/AdminPage'
 export default function App() {
   const [masterKey, setMasterKey] = useState(null)
 
+  const vaultUnlocked = !!masterKey
+
   return (
     <AuthProvider>
       <Routes>
         <Route path="/auth" element={<AuthPage />} />
+
         <Route
           path="/"
           element={
             <ProtectedRoute>
-              <Layout>
+              <Layout vaultUnlocked={vaultUnlocked}>
                 <Navigate to="/dashboard" replace />
               </Layout>
             </ProtectedRoute>
           }
         />
+
         <Route
           path="/dashboard"
           element={
             <ProtectedRoute>
-              <Layout>
+              <Layout vaultUnlocked={vaultUnlocked}>
                 <Dashboard />
               </Layout>
             </ProtectedRoute>
           }
         />
+
         <Route
           path="/profile"
           element={
             <ProtectedRoute>
-              <Layout>
-                <ProfilePage onMasterKeyReady={setMasterKey} />
+              <Layout vaultUnlocked={vaultUnlocked}>
+                <ProfilePage />
               </Layout>
             </ProtectedRoute>
           }
         />
+
         <Route
           path="/tools/achievements"
           element={
             <ProtectedRoute>
-              <Layout>
+              <Layout vaultUnlocked={vaultUnlocked}>
                 <AchievementsPage />
               </Layout>
             </ProtectedRoute>
           }
         />
+
         <Route
           path="/tools/vault"
           element={
             <ProtectedRoute>
-              <Layout>
-                <VaultPage masterKey={masterKey} />
+              <Layout vaultUnlocked={vaultUnlocked}>
+                <VaultPage
+                  masterKey={masterKey}
+                  onMasterKeyReady={setMasterKey}
+                />
               </Layout>
             </ProtectedRoute>
           }
         />
+
         <Route
           path="/tools/stoic"
           element={
             <ProtectedRoute>
-              <Layout>
+              <Layout vaultUnlocked={vaultUnlocked}>
                 <StoicQuotesPage />
               </Layout>
             </ProtectedRoute>
           }
         />
+
         <Route
           path="/admin"
           element={
             <AdminRoute>
-              <Layout>
+              <Layout vaultUnlocked={vaultUnlocked}>
                 <AdminPage />
               </Layout>
             </AdminRoute>
           }
         />
+
         <Route path="*" element={<Navigate to="/dashboard" replace />} />
       </Routes>
     </AuthProvider>

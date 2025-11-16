@@ -3,7 +3,7 @@ import { Link, NavLink } from 'react-router-dom'
 import { supabase } from '../supabaseClient'
 import { useAuth } from '../context/AuthContext'
 
-export default function Layout({ children }) {
+export default function Layout({ children, vaultUnlocked }) {
   const { session, profile, isAdmin } = useAuth()
 
   const handleLogout = async () => {
@@ -19,7 +19,7 @@ export default function Layout({ children }) {
           </span>
           <span className="text-lg font-semibold tracking-tight">Life Tools Hub</span>
         </Link>
-        <div className="flex items-center gap-4 text-sm">
+        <div className="flex items-center gap-3 text-sm">
           {session && (
             <>
               <NavLink
@@ -54,6 +54,19 @@ export default function Layout({ children }) {
                   Admin
                 </NavLink>
               )}
+
+              {/* Vault secure indicator */}
+              <span
+                className={[
+                  'hidden sm:inline-flex items-center gap-1 text-[11px] px-2 py-1 rounded-full border',
+                  vaultUnlocked
+                    ? 'border-emerald-500/60 text-emerald-300 bg-emerald-500/10'
+                    : 'border-amber-500/60 text-amber-300 bg-amber-500/10',
+                ].join(' ')}
+              >
+                <span>{vaultUnlocked ? '🔓 Vault unlocked' : '🔒 Vault locked'}</span>
+              </span>
+
               <span className="hidden sm:inline text-slate-400">
                 {profile?.email ?? session.user.email}
               </span>

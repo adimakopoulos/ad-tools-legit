@@ -1,15 +1,17 @@
 import React, { useEffect, useState } from 'react'
 import { useAuth } from '../context/AuthContext'
 import { supabase } from '../supabaseClient'
-import { decryptJson, encryptJson } from '../utils/crypto'
+import { decryptJson, encryptJson, deriveMasterKey } from '../utils/crypto'
 
-export default function VaultPage({ masterKey }) {
+export default function VaultPage({ masterKey, onMasterKeyReady }) {
   const { session, profile } = useAuth()
   const [entries, setEntries] = useState([])
   const [loading, setLoading] = useState(true)
   const [form, setForm] = useState({ label: '', url: '', username: '', password: '' })
   const [showDecryptedId, setShowDecryptedId] = useState(null)
   const [decryptedCache, setDecryptedCache] = useState({})
+  const [unlockPassword, setUnlockPassword] = useState('')
+  const [unlockMessage, setUnlockMessage] = useState('')
 
   const load = async () => {
     setLoading(true)
@@ -27,10 +29,41 @@ export default function VaultPage({ masterKey }) {
     if (session) load()
   }, [session])
 
+  const handleUnlock = async (e) => {
+    e.preventDefault()
+    setUnlockMessage('')
+
+    if (!profile?.master_password_hash || !profile?.master_password_salt) {
+      setUnlockMessage('You need to set a master password in your profile first.')
+      return
+    }
+
+    try {
+      const { key, hash } = await deriveMasterKey(unlockPassword, profile.master_password_salt)
+      if (hash !== profile.master_password_hash) {
+        setUnlockMessage('Wrong master password.')
+        return
+      }
+      onMasterKeyReady?.(key)
+      setUnlockMessage('Vault unlocked for this session.')
+      setUnlockPassword('')
+    } catch (err) {
+      console.error(err)
+      setUnlockMessage('Failed to derive key.')
+    }
+  }
+
+  const handleLock = () => {
+    onMasterKeyReady?.(null)
+    setDecryptedCache({})
+    setShowDecryptedId(null)
+    setUnlockMessage('Vault locked for this session.')
+  }
+
   const handleCreate = async (e) => {
     e.preventDefault()
     if (!masterKey) {
-      alert('Unlock your vault via Profile → Master Password first.')
+      alert('Unlock your vault first by entering your master password above.')
       return
     }
     const secret = {
@@ -60,7 +93,7 @@ export default function VaultPage({ masterKey }) {
 
   const reveal = async (entry) => {
     if (!masterKey) {
-      alert('Unlock your vault via Profile → Master Password first.')
+      alert('Unlock your vault first by entering your master password above.')
       return
     }
     if (decryptedCache[entry.id]) {
@@ -77,15 +110,85 @@ export default function VaultPage({ masterKey }) {
     }
   }
 
+  const hasMasterConfigured = !!profile?.master_password_hash
+
   return (
     <div className="mt-6 grid gap-6 md:grid-cols-[minmax(0,1.1fr)_minmax(0,1.2fr)]">
-      <div className="glass rounded-3xl p-6">
-        <h2 className="text-xl font-semibold mb-2">Encryption vault</h2>
-        <p className="text-xs text-slate-400 mb-4">
-          All entries are encrypted in your browser using your master password-derived key. Even
-          database access does not allow decryption without that key. If you forget your master password,
-          the data is unrecoverable.
-        </p>
+      <div className="glass rounded-3xl p-6 space-y-4">
+        <div className="flex items-center justify-between gap-3">
+          <div>
+            <h2 className="text-xl font-semibold mb-1">Encryption vault</h2>
+            <p className="text-xs text-slate-400">
+              All entries are encrypted in your browser using a key derived from your master password.
+              Even with database access, data cannot be decrypted without that key.
+            </p>
+          </div>
+          <div
+            className={[
+              'inline-flex flex-col items-end text-[11px] px-3 py-2 rounded-2xl border',
+              masterKey
+                ? 'border-emerald-500/60 text-emerald-300 bg-emerald-500/10'
+                : 'border-amber-500/60 text-amber-300 bg-amber-500/10',
+            ].join(' ')}
+          >
+            <span className="font-medium">
+              {masterKey ? '🔓 Unlocked' : '🔒 Locked'}
+            </span>
+            <span className="text-[10px] text-slate-400">
+              {masterKey
+                ? 'Decryption key loaded for this session'
+                : 'Enter master password to unlock'}
+            </span>
+          </div>
+        </div>
+
+        {/* Unlock / lock controls */}
+        <div className="rounded-2xl border border-slate-800/80 bg-slate-950/40 p-4 space-y-3">
+          {!hasMasterConfigured ? (
+            <div className="text-xs text-amber-300">
+              You have not set a master password yet. Go to your <strong>Profile</strong> page
+              to create one. Without it, you cannot decrypt vault entries.
+            </div>
+          ) : masterKey ? (
+            <div className="flex items-center justify-between gap-3 text-xs">
+              <div className="text-emerald-300">
+                Vault is unlocked. Your derived key is kept only in this browser session.
+              </div>
+              <button
+                type="button"
+                onClick={handleLock}
+                className="btn-primary bg-slate-800 hover:bg-slate-700"
+              >
+                Lock vault
+              </button>
+            </div>
+          ) : (
+            <form onSubmit={handleUnlock} className="space-y-3">
+              <div>
+                <label className="text-xs text-slate-300">
+                  Enter master password to unlock vault
+                </label>
+                <input
+                  type="password"
+                  className="input mt-1"
+                  required
+                  value={unlockPassword}
+                  onChange={e => setUnlockPassword(e.target.value)}
+                />
+              </div>
+              <button className="btn-primary">
+                Unlock vault
+              </button>
+              {unlockMessage && (
+                <div className="text-[11px] text-slate-300 bg-slate-900/60 rounded-xl px-3 py-2">
+                  {unlockMessage}
+                </div>
+              )}
+            </form>
+          )}
+        </div>
+
+        {/* Create entry form */}
         <form onSubmit={handleCreate} className="space-y-3">
           <div>
             <label className="text-xs text-slate-300">Account label</label>
@@ -125,13 +228,10 @@ export default function VaultPage({ masterKey }) {
           <button className="btn-primary w-full">
             Save encrypted entry
           </button>
-          {!profile?.master_password_hash && (
-            <div className="text-[10px] text-amber-300/90">
-              Set a master password in your profile first. Without it, you won&apos;t be able to decrypt later.
-            </div>
-          )}
         </form>
       </div>
+
+      {/* Entries list */}
       <div className="glass rounded-3xl p-4 max-h-[70vh] overflow-auto">
         <h3 className="text-sm font-semibold mb-2">Your vault entries</h3>
         {loading ? (
