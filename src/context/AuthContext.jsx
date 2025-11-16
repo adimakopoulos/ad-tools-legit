@@ -9,55 +9,68 @@ export function AuthProvider({ children }) {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    const init = async () => {
-      const { data: { session } } = await supabase.auth.getSession()
-      setSession(session)
-      if (session?.user) {
-        await loadProfile(session.user)
-      }
-      setLoading(false)
-    }
-    init()
+    let cancelled = false
 
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange(async (_event, session) => {
-      setSession(session)
-      if (session?.user) {
-        await loadProfile(session.user)
+    } = supabase.auth.onAuthStateChange((event, newSession) => {
+      if (cancelled) return
+
+      console.log('[Auth] event', event, newSession)
+
+      setSession(newSession)
+
+      if (newSession?.user) {
+        // fire-and-forget
+        loadProfile(newSession.user, cancelled)
       } else {
         setProfile(null)
       }
+
+      setLoading(false)
     })
 
-    return () => subscription.unsubscribe()
+    return () => {
+      cancelled = true
+      subscription.unsubscribe()
+    }
   }, [])
 
-  const loadProfile = async (user) => {
-    const { data, error } = await supabase
-      .from('profiles')
-      .select('*')
-      .eq('user_id', user.id)
-      .maybeSingle()
-
-    if (error) {
-      console.error(error)
-      return
-    }
-
-    if (!data) {
-      const { data: created, error: insertError } = await supabase
+  const loadProfile = async (user, cancelledFlag) => {
+    try {
+      console.log('[Auth] loadProfile for', user.id)
+      const { data, error } = await supabase
         .from('profiles')
-        .insert({ user_id: user.id, email: user.email })
         .select('*')
-        .single()
-      if (insertError) {
-        console.error(insertError)
+        .eq('user_id', user.id)
+        .maybeSingle()
+
+      if (cancelledFlag) return
+
+      if (error) {
+        console.error('[Auth] loadProfile error:', error)
         return
       }
-      setProfile(created)
-    } else {
-      setProfile(data)
+
+      if (!data) {
+        console.log('[Auth] no profile, creating')
+        const { data: created, error: insertError } = await supabase
+          .from('profiles')
+          .insert({ user_id: user.id, email: user.email })
+          .select('*')
+          .single()
+
+        if (insertError) {
+          console.error('[Auth] create profile error:', insertError)
+          return
+        }
+
+        setProfile(created)
+      } else {
+        setProfile(data)
+      }
+    } catch (err) {
+      console.error('[Auth] loadProfile crashed', err)
     }
   }
 
@@ -68,6 +81,8 @@ export function AuthProvider({ children }) {
     isVerified: !!session?.user?.email_confirmed_at,
     isAdmin: profile?.role === 'admin',
   }
+
+  console.log('[Auth] context value', value)
 
   return (
     <AuthContext.Provider value={value}>
