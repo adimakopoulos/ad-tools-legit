@@ -21,12 +21,13 @@ export function AuthProvider({ children }) {
       setSession(newSession)
 
       if (newSession?.user) {
-        // fire-and-forget
+        // fire-and-forget profile load
         loadProfile(newSession.user, cancelled)
       } else {
         setProfile(null)
       }
 
+      // we got some auth info → initial loading is done
       setLoading(false)
     })
 
@@ -36,7 +37,7 @@ export function AuthProvider({ children }) {
     }
   }, [])
 
-  const loadProfile = async (user, cancelledFlag) => {
+  const loadProfile = async (user, cancelledFlag = false) => {
     try {
       console.log('[Auth] loadProfile for', user.id)
       const { data, error } = await supabase
@@ -74,12 +75,18 @@ export function AuthProvider({ children }) {
     }
   }
 
+  // ✅ local in-memory patch helper
+  const updateProfileLocally = (patch) => {
+    setProfile((prev) => (prev ? { ...prev, ...patch } : prev))
+  }
+
   const value = {
     session,
     profile,
     loading,
     isVerified: !!session?.user?.email_confirmed_at,
     isAdmin: profile?.role === 'admin',
+    updateProfileLocally, // 👈 expose this
   }
 
   console.log('[Auth] context value', value)

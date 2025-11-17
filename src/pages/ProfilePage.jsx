@@ -4,7 +4,7 @@ import { supabase } from '../supabaseClient'
 import { createMasterSecret } from '../utils/crypto'
 
 export default function ProfilePage() {
-  const { session, profile, isVerified } = useAuth()
+  const { session, profile, isVerified, updateProfileLocally } = useAuth()
   const [message, setMessage] = useState('')
   const [loading, setLoading] = useState(false)
   const [masterPassword, setMasterPassword] = useState('')
@@ -22,7 +22,7 @@ export default function ProfilePage() {
     }
 
     if (profile?.master_password_hash) {
-      setMessage('Master password is already set. It cannot be changed (by design). Use the vault page to unlock it for a session.')
+      setMessage('Master password is already set. It cannot be changed.')
       return
     }
 
@@ -40,7 +40,6 @@ export default function ProfilePage() {
       setLoading(true)
       const { key, saltB64, hash } = await createMasterSecret(masterPassword)
 
-      // We store only salt + hash in the profile.
       const { error } = await supabase
         .from('profiles')
         .update({
@@ -50,6 +49,12 @@ export default function ProfilePage() {
         .eq('user_id', session.user.id)
 
       if (error) throw error
+
+      // ✅ update the in-memory profile so UI reacts immediately
+      updateProfileLocally({
+        master_password_salt: saltB64,
+        master_password_hash: hash,
+      })
 
       setMessage('Master password set. Store it somewhere safe – it cannot be recovered or changed.')
       setMasterPassword('')
