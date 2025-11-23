@@ -11,6 +11,13 @@ const tools = [
     icon: '🏆',
   },
   {
+    id: 'goals',
+    name: 'Life Goals Tracker',
+    description: 'Weekly, monthly or yearly goals grouped by life pillars like Family, Health, Career.',
+    to: '/tools/goals',
+    icon: '🎯',
+  },
+  {
     id: 'vault',
     name: 'Encryption Vault',
     description: 'Store accounts and passwords with client-side encryption and a master password.',

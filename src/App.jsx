@@ -10,6 +10,7 @@ import AchievementsPage from './pages/AchievementsPage'
 import VaultPage from './pages/VaultPage'
 import StoicQuotesPage from './pages/StoicQuotesPage'
 import AdminPage from './pages/AdminPage'
+import LifeGoalsPage from './pages/LifeGoalsPage'
 
 export default function App() {
   const [masterKey, setMasterKey] = useState(null)
@@ -100,6 +101,16 @@ export default function App() {
             </AdminRoute>
           }
         />
+<Route
+  path="/tools/goals"
+  element={
+    <ProtectedRoute>
+      <Layout vaultUnlocked={vaultUnlocked}>
+        <LifeGoalsPage />
+      </Layout>
+    </ProtectedRoute>
+  }
+/>
 
         <Route path="*" element={<Navigate to="/dashboard" replace />} />
       </Routes>
