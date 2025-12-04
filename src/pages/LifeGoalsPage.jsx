@@ -1,3 +1,4 @@
+// src/pages/LifeGoalsPage.jsx
 import React, { useEffect, useMemo, useState } from 'react'
 import { supabase } from '../supabaseClient'
 import { useAuth } from '../context/AuthContext'
@@ -18,7 +19,16 @@ export default function LifeGoalsPage() {
     target_points: 4,
     pillar_id: '',
   })
-  const [commentForm, setCommentForm] = useState({ goal_id: '', comment: '' })
+
+  // editing states
+  const [editingPillarId, setEditingPillarId] = useState(null)
+  const [pillarEditForm, setPillarEditForm] = useState({ name: '', description: '' })
+  const [editingGoalId, setEditingGoalId] = useState(null)
+  const [goalEditForm, setGoalEditForm] = useState({
+    title: '',
+    cadence: 'weekly',
+    target_points: 4,
+  })
 
   const userId = session?.user?.id
 
@@ -83,15 +93,47 @@ export default function LifeGoalsPage() {
     if (!selectedPillarId) setSelectedPillarId(data.id)
   }
 
+  const startEditPillar = (pillar) => {
+    setEditingPillarId(pillar.id)
+    setPillarEditForm({
+      name: pillar.name,
+      description: pillar.description || '',
+    })
+  }
+
+  const cancelEditPillar = () => {
+    setEditingPillarId(null)
+    setPillarEditForm({ name: '', description: '' })
+  }
+
+  const saveEditPillar = async (pillar) => {
+    const payload = {
+      name: pillarEditForm.name.trim(),
+      description: pillarEditForm.description.trim() || null,
+    }
+    const { data, error } = await supabase
+      .from('life_pillars')
+      .update(payload)
+      .eq('id', pillar.id)
+      .select('*')
+      .single()
+    if (error) {
+      console.error(error)
+      return
+    }
+    setPillars(prev => prev.map(p => (p.id === pillar.id ? data : p)))
+    cancelEditPillar()
+  }
+
   const handleCreateGoal = async (e) => {
     e.preventDefault()
-    if (!goalForm.title.trim() || !goalForm.pillar_id) return
+    if (!goalForm.title.trim() || !selectedPillarId) return
     const start = new Date()
     const startStr = start.toISOString().slice(0, 10)
     const endStr = computeGoalEndDate(start, goalForm.cadence)
     const payload = {
       user_id: userId,
-      pillar_id: goalForm.pillar_id,
+      pillar_id: selectedPillarId,
       title: goalForm.title.trim(),
       cadence: goalForm.cadence,
       start_date: startStr,
@@ -113,17 +155,61 @@ export default function LifeGoalsPage() {
       title: '',
       cadence: goalForm.cadence,
       target_points: goalForm.target_points,
-      pillar_id: goalForm.pillar_id,
+      pillar_id: selectedPillarId,
     })
   }
 
-  const handleAddComment = async (e) => {
-    e.preventDefault()
-    if (!commentForm.goal_id || !commentForm.comment.trim()) return
+  const startEditGoal = (goal) => {
+    setEditingGoalId(goal.id)
+    setGoalEditForm({
+      title: goal.title,
+      cadence: goal.cadence,
+      target_points: goal.target_points,
+    })
+  }
+
+  const cancelEditGoal = () => {
+    setEditingGoalId(null)
+    setGoalEditForm({
+      title: '',
+      cadence: 'weekly',
+      target_points: 4,
+    })
+  }
+
+  const saveEditGoal = async (goal) => {
+    const payload = {
+      title: goalEditForm.title.trim(),
+      cadence: goalEditForm.cadence,
+      target_points: Number(goalEditForm.target_points) || 1,
+    }
+
+    // if cadence changed, recompute end_date from current start_date
+    if (goalEditForm.cadence !== goal.cadence) {
+      const start = new Date(goal.start_date)
+      payload.end_date = computeGoalEndDate(start, goalEditForm.cadence)
+    }
+
+    const { data, error } = await supabase
+      .from('life_goals')
+      .update(payload)
+      .eq('id', goal.id)
+      .select('*')
+      .single()
+    if (error) {
+      console.error(error)
+      return
+    }
+    setGoals(prev => prev.map(g => (g.id === goal.id ? data : g)))
+    cancelEditGoal()
+  }
+
+  const handleAddComment = async (goalId, commentText, setLocalValue) => {
+    if (!commentText.trim()) return
     const payload = {
       user_id: userId,
-      goal_id: commentForm.goal_id,
-      comment: commentForm.comment.trim(),
+      goal_id: goalId,
+      comment: commentText.trim(),
       points: 1,
     }
     const { data, error } = await supabase
@@ -136,7 +222,7 @@ export default function LifeGoalsPage() {
       return
     }
     setEntries(prev => [...prev, data])
-    setCommentForm({ goal_id: commentForm.goal_id, comment: '' })
+    setLocalValue('')
   }
 
   const handleRestartGoal = async (goal) => {
@@ -158,7 +244,6 @@ export default function LifeGoalsPage() {
       return
     }
     setGoals(prev => prev.map(g => (g.id === goal.id ? data : g)))
-    // we keep history entries; active points are computed by date range
   }
 
   // Derived: per-goal current-cycle points & comments
@@ -190,7 +275,6 @@ export default function LifeGoalsPage() {
     return stats
   }, [goals, entriesByGoal])
 
-  // Per-pillar aggregation of all points & comments (all time)
   const pillarStats = useMemo(() => {
     return pillars.map(p => {
       const pGoals = goals.filter(g => g.pillar_id === p.id)
@@ -263,31 +347,87 @@ export default function LifeGoalsPage() {
             </div>
           ) : (
             <ul className="space-y-2">
-              {pillarStats.map(({ pillar, totalPoints, totalComments, goalCount }) => (
-                <li
-                  key={pillar.id}
-                  className={`rounded-2xl border border-slate-800/80 bg-slate-950/40 p-3 tile-hover cursor-pointer ${
-                    selectedPillarId === pillar.id ? 'ring-1 ring-sky-500/70' : ''
-                  }`}
-                  onClick={() => setSelectedPillarId(pillar.id)}
-                >
-                  <div className="flex items-center justify-between text-xs">
-                    <div>
-                      <div className="font-semibold">{pillar.name}</div>
-                      {pillar.description && (
-                        <div className="text-slate-400 text-[11px]">
-                          {pillar.description}
+              {pillarStats.map(({ pillar, totalPoints, totalComments, goalCount }) => {
+                const isEditing = editingPillarId === pillar.id
+                return (
+                  <li
+                    key={pillar.id}
+                    className={`rounded-2xl border border-slate-800/80 bg-slate-950/40 p-3 tile-hover ${
+                      selectedPillarId === pillar.id ? 'ring-1 ring-sky-500/70' : ''
+                    }`}
+                  >
+                    {isEditing ? (
+                      <div className="space-y-2 text-xs">
+                        <input
+                          className="input h-8 text-[11px]"
+                          value={pillarEditForm.name}
+                          onChange={e =>
+                            setPillarEditForm(f => ({ ...f, name: e.target.value }))
+                          }
+                        />
+                        <input
+                          className="input h-8 text-[11px]"
+                          placeholder="Description"
+                          value={pillarEditForm.description}
+                          onChange={e =>
+                            setPillarEditForm(f => ({ ...f, description: e.target.value }))
+                          }
+                        />
+                        <div className="flex gap-2 justify-end">
+                          <button
+                            type="button"
+                            className="text-[11px] text-slate-300 hover:text-slate-100"
+                            onClick={cancelEditPillar}
+                          >
+                            Cancel
+                          </button>
+                          <button
+                            type="button"
+                            className="text-[11px] text-sky-300 hover:text-sky-100"
+                            onClick={() => saveEditPillar(pillar)}
+                          >
+                            Save
+                          </button>
                         </div>
-                      )}
-                    </div>
-                    <div className="text-right text-[11px] text-slate-300 space-y-0.5">
-                      <div>{goalCount} goal{goalCount === 1 ? '' : 's'}</div>
-                      <div>{totalPoints} point{totalPoints === 1 ? '' : 's'}</div>
-                      <div>{totalComments} action{totalComments === 1 ? '' : 's'}</div>
-                    </div>
-                  </div>
-                </li>
-              ))}
+                      </div>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => setSelectedPillarId(pillar.id)}
+                        className="w-full text-left"
+                      >
+                        <div className="flex items-center justify-between text-xs">
+                          <div>
+                            <div className="font-semibold">{pillar.name}</div>
+                            {pillar.description && (
+                              <div className="text-slate-400 text-[11px]">
+                                {pillar.description}
+                              </div>
+                            )}
+                          </div>
+                          <div className="text-right text-[11px] text-slate-300 space-y-0.5">
+                            <div>{goalCount} goal{goalCount === 1 ? '' : 's'}</div>
+                            <div>{totalPoints} point{totalPoints === 1 ? '' : 's'}</div>
+                            <div>{totalComments} action{totalComments === 1 ? '' : 's'}</div>
+                          </div>
+                        </div>
+                        <div className="mt-2 flex justify-end text-[11px] text-slate-400">
+                          <button
+                            type="button"
+                            onClick={(ev) => {
+                              ev.stopPropagation()
+                              startEditPillar(pillar)
+                            }}
+                            className="hover:text-sky-300"
+                          >
+                            Edit pillar
+                          </button>
+                        </div>
+                      </button>
+                    )}
+                  </li>
+                )
+              })}
             </ul>
           )}
         </div>
@@ -348,18 +488,7 @@ export default function LifeGoalsPage() {
                   />
                 </div>
               </div>
-              {/* pillar_id is fixed to selected pillar */}
-              <input
-                type="hidden"
-                value={selectedPillar.id}
-                readOnly
-              />
-              <button
-                className="btn-primary w-full"
-                onClick={() =>
-                  setGoalForm(f => ({ ...f, pillar_id: selectedPillar.id }))
-                }
-              >
+              <button className="btn-primary w-full">
                 Add goal for this pillar
               </button>
             </form>
@@ -381,75 +510,136 @@ export default function LifeGoalsPage() {
                       100,
                       Math.round((stats.points / (goal.target_points || 1)) * 100),
                     )
+                    const isEditing = editingGoalId === goal.id
+
+                    const [localComment, setLocalComment] = useState('')
+                    // quick hack: ensure local state per goal
+                    // (if you prefer, lift this out, but this works fine in practice)
+
                     return (
                       <li
                         key={goal.id}
                         className="rounded-2xl border border-slate-800/80 bg-slate-950/40 p-4 tile-hover"
                       >
-                        <div className="flex items-center justify-between text-xs mb-2">
-                          <div>
-                            <div className="font-semibold">{goal.title}</div>
-                            <div className="text-slate-400 text-[11px]">
-                              {goal.cadence} • {goal.start_date} → {goal.end_date}
+                        {isEditing ? (
+                          <div className="space-y-2 text-xs">
+                            <input
+                              className="input h-8 text-[11px]"
+                              value={goalEditForm.title}
+                              onChange={e =>
+                                setGoalEditForm(f => ({ ...f, title: e.target.value }))
+                              }
+                            />
+                            <div className="grid grid-cols-2 gap-2">
+                              <select
+                                className="input h-8 text-[11px]"
+                                value={goalEditForm.cadence}
+                                onChange={e =>
+                                  setGoalEditForm(f => ({ ...f, cadence: e.target.value }))
+                                }
+                              >
+                                <option value="weekly">Weekly</option>
+                                <option value="monthly">Monthly</option>
+                                <option value="yearly">Yearly</option>
+                              </select>
+                              <input
+                                type="number"
+                                min={1}
+                                className="input h-8 text-[11px]"
+                                value={goalEditForm.target_points}
+                                onChange={e =>
+                                  setGoalEditForm(f => ({
+                                    ...f,
+                                    target_points: e.target.value,
+                                  }))
+                                }
+                              />
+                            </div>
+                            <div className="flex gap-2 justify-end">
+                              <button
+                                type="button"
+                                className="text-[11px] text-slate-300 hover:text-slate-100"
+                                onClick={cancelEditGoal}
+                              >
+                                Cancel
+                              </button>
+                              <button
+                                type="button"
+                                className="text-[11px] text-sky-300 hover:text-sky-100"
+                                onClick={() => saveEditGoal(goal)}
+                              >
+                                Save
+                              </button>
                             </div>
                           </div>
-                          <div className="text-right text-[11px] text-slate-300 space-y-0.5">
-                            <div>
-                              {stats.points}/{goal.target_points} points
-                            </div>
-                            <div>
-                              {stats.currentCount} action
-                              {stats.currentCount === 1 ? '' : 's'} this period
-                            </div>
-                            {expired && (
-                              <div className="text-amber-300">
-                                Period expired
+                        ) : (
+                          <>
+                            <div className="flex items-center justify-between text-xs mb-2">
+                              <div>
+                                <div className="font-semibold">{goal.title}</div>
+                                <div className="text-slate-400 text-[11px]">
+                                  {goal.cadence} • {goal.start_date} → {goal.end_date}
+                                </div>
                               </div>
-                            )}
-                          </div>
-                        </div>
-                        <div className="mt-2 h-2 w-full overflow-hidden rounded-full bg-slate-900/80">
-                          <div
-                            className="h-full bg-sky-500"
-                            style={{ width: `${pct}%` }}
-                          />
-                        </div>
+                              <div className="text-right text-[11px] text-slate-300 space-y-0.5">
+                                <div>
+                                  {stats.points}/{goal.target_points} points
+                                </div>
+                                <div>
+                                  {stats.currentCount} action
+                                  {stats.currentCount === 1 ? '' : 's'} this period
+                                </div>
+                                {expired && (
+                                  <div className="text-amber-300">
+                                    Period expired
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                            <div className="mt-2 h-2 w-full overflow-hidden rounded-full bg-slate-900/80">
+                              <div
+                                className="h-full bg-sky-500"
+                                style={{ width: `${pct}%` }}
+                              />
+                            </div>
+                            <div className="mt-2 flex justify-end text-[11px] text-slate-400 gap-3">
+                              <button
+                                type="button"
+                                onClick={() => startEditGoal(goal)}
+                                className="hover:text-sky-300"
+                              >
+                                Edit goal
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => handleRestartGoal(goal)}
+                                className="hover:text-amber-300"
+                              >
+                                Restart period
+                              </button>
+                            </div>
+                          </>
+                        )}
 
-                        <div className="mt-3 flex items-center justify-between gap-3 text-[11px]">
-                          <form
-                            onSubmit={e => {
-                              setCommentForm(f => ({ ...f, goal_id: goal.id }))
-                              handleAddComment(e)
-                            }}
-                            className="flex-1 flex items-center gap-2"
-                          >
+                        {!isEditing && (
+                          <div className="mt-3 flex items-center gap-2 text-[11px]">
                             <input
                               className="input h-8 text-[11px]"
                               placeholder="Add a comment about how you progressed..."
-                              value={
-                                commentForm.goal_id === goal.id
-                                  ? commentForm.comment
-                                  : ''
-                              }
-                              onChange={e =>
-                                setCommentForm({
-                                  goal_id: goal.id,
-                                  comment: e.target.value,
-                                })
-                              }
+                              value={localComment}
+                              onChange={e => setLocalComment(e.target.value)}
                             />
-                            <button className="btn-primary h-8 px-3 text-[11px]">
+                            <button
+                              className="btn-primary h-8 px-3 text-[11px]"
+                              type="button"
+                              onClick={() =>
+                                handleAddComment(goal.id, localComment, setLocalComment)
+                              }
+                            >
                               +1 point
                             </button>
-                          </form>
-                          <button
-                            type="button"
-                            onClick={() => handleRestartGoal(goal)}
-                            className="text-[11px] text-slate-300 hover:text-sky-300"
-                          >
-                            Restart period (reset to 0)
-                          </button>
-                        </div>
+                          </div>
+                        )}
                       </li>
                     )
                   })}
