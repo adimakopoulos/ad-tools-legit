@@ -4,6 +4,7 @@ import { AuthProvider } from './context/AuthContext'
 import Layout from './components/Layout'
 import { ProtectedRoute, AdminRoute } from './components/ProtectedRoute'
 import AuthPage from './pages/AuthPage'
+import ResetPasswordPage from './pages/ResetPasswordPage'
 import Dashboard from './pages/Dashboard'
 import ProfilePage from './pages/ProfilePage'
 import AchievementsPage from './pages/AchievementsPage'
@@ -11,6 +12,7 @@ import VaultPage from './pages/VaultPage'
 import StoicQuotesPage from './pages/StoicQuotesPage'
 import AdminPage from './pages/AdminPage'
 import LifeGoalsPage from './pages/LifeGoalsPage'
+import TalkIssuesPage from './pages/TalkIssuesPage'
 
 export default function App() {
   const [masterKey, setMasterKey] = useState(null)
@@ -21,6 +23,7 @@ export default function App() {
     <AuthProvider>
       <Routes>
         <Route path="/auth" element={<AuthPage />} />
+        <Route path="/reset-password" element={<ResetPasswordPage />} />
 
         <Route
           path="/"
@@ -111,6 +114,18 @@ export default function App() {
     </ProtectedRoute>
   }
 />
+
+<Route
+  path="/tools/talk-issues"
+  element={
+    <ProtectedRoute>
+      <Layout vaultUnlocked={vaultUnlocked}>
+        <TalkIssuesPage />
+      </Layout>
+    </ProtectedRoute>
+  }
+/>
+
 
         <Route path="*" element={<Navigate to="/dashboard" replace />} />
       </Routes>
