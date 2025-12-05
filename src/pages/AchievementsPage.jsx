@@ -112,7 +112,7 @@ export default function AchievementsPage() {
       fulfilling: Number(editForm.fulfilling),
       happy: Number(editForm.happy),
       accomplished: Number(editForm.accomplished),
-      tags: generateTags(editForm.title, editForm.description),
+      // leave tags as-is in DB; they were set at creation time
     }
     const { data, error } = await supabase
       .from('achievements')
