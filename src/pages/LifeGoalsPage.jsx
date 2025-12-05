@@ -11,6 +11,7 @@ export default function LifeGoalsPage() {
   const [entries, setEntries] = useState([])
   const [selectedPillarId, setSelectedPillarId] = useState(null)
   const [loading, setLoading] = useState(true)
+  const [commentDrafts, setCommentDrafts] = useState({}) // { [goalId]: text }
 
   const [pillarForm, setPillarForm] = useState({ name: '', description: '' })
   const [goalForm, setGoalForm] = useState({
@@ -204,26 +205,35 @@ export default function LifeGoalsPage() {
     cancelEditGoal()
   }
 
-  const handleAddComment = async (goalId, commentText, setLocalValue) => {
-    if (!commentText.trim()) return
+  const handleAddComment = async (goalId) => {
+    const raw = commentDrafts[goalId] ?? ''
+    const commentText = raw.trim()
+    if (!commentText) return
+
     const payload = {
       user_id: userId,
       goal_id: goalId,
-      comment: commentText.trim(),
+      comment: commentText,
       points: 1,
     }
+
     const { data, error } = await supabase
       .from('life_goal_entries')
       .insert(payload)
       .select('*')
       .single()
+
     if (error) {
       console.error(error)
       return
     }
+
     setEntries(prev => [...prev, data])
-    setLocalValue('')
+
+    // clear only this goal's draft
+    setCommentDrafts(prev => ({ ...prev, [goalId]: '' }))
   }
+
 
   const handleRestartGoal = async (goal) => {
     const start = new Date()
@@ -512,7 +522,7 @@ export default function LifeGoalsPage() {
                     )
                     const isEditing = editingGoalId === goal.id
 
-                    const [localComment, setLocalComment] = useState('')
+//                     const [localComment, setLocalComment] = useState('')
                     // quick hack: ensure local state per goal
                     // (if you prefer, lift this out, but this works fine in practice)
 
@@ -621,25 +631,30 @@ export default function LifeGoalsPage() {
                           </>
                         )}
 
+                        {/* under each goal card, when not editing */}
                         {!isEditing && (
                           <div className="mt-3 flex items-center gap-2 text-[11px]">
                             <input
                               className="input h-8 text-[11px]"
                               placeholder="Add a comment about how you progressed..."
-                              value={localComment}
-                              onChange={e => setLocalComment(e.target.value)}
+                              value={commentDrafts[goal.id] ?? ''}
+                              onChange={e =>
+                                setCommentDrafts(prev => ({
+                                  ...prev,
+                                  [goal.id]: e.target.value,
+                                }))
+                              }
                             />
                             <button
                               className="btn-primary h-8 px-3 text-[11px]"
                               type="button"
-                              onClick={() =>
-                                handleAddComment(goal.id, localComment, setLocalComment)
-                              }
+                              onClick={() => handleAddComment(goal.id)}
                             >
                               +1 point
                             </button>
                           </div>
                         )}
+
                       </li>
                     )
                   })}
