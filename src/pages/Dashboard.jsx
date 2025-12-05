@@ -31,6 +31,13 @@ const tools = [
     to: '/tools/stoic',
     icon: '📜',
   },
+  {
+    id: 'talk-issues',
+    name: 'Talk Issues',
+    description: 'Keep a backlog of things you want to discuss with specific people and mark them complete after you talk.',
+    to: '/tools/talk-issues',
+    icon: '💬',
+  },
 ]
 
 export default function Dashboard() {

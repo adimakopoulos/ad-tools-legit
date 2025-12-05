@@ -11,6 +11,7 @@ import VaultPage from './pages/VaultPage'
 import StoicQuotesPage from './pages/StoicQuotesPage'
 import AdminPage from './pages/AdminPage'
 import LifeGoalsPage from './pages/LifeGoalsPage'
+import TalkIssuesPage from './pages/TalkIssuesPage'
 
 export default function App() {
   const [masterKey, setMasterKey] = useState(null)
@@ -111,6 +112,18 @@ export default function App() {
     </ProtectedRoute>
   }
 />
+
+<Route
+  path="/tools/talk-issues"
+  element={
+    <ProtectedRoute>
+      <Layout vaultUnlocked={vaultUnlocked}>
+        <TalkIssuesPage />
+      </Layout>
+    </ProtectedRoute>
+  }
+/>
+
 
         <Route path="*" element={<Navigate to="/dashboard" replace />} />
       </Routes>
