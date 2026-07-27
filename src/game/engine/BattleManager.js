@@ -1,4 +1,4 @@
-import { createUnit, updateUnit } from './UnitController'
+import { createUnit, updateUnit, resolveCollisions } from './UnitController'
 import { getTemplate } from '../data/mercenaryTemplates'
 
 export const GRID_ROWS = 8
@@ -53,6 +53,8 @@ export function updateBattle(state, deltaTime) {
     const friends = unit.team === 'player' ? playerUnits : enemyUnits
     updateUnit(unit, friends, foes, deltaTime)
   }
+
+  resolveCollisions(state.units)
 
   return state
 }

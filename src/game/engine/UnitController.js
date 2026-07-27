@@ -1,6 +1,9 @@
 import { calcStats } from './StatsCalculator'
 
 const CELL_SIZE = 80
+const COLLISION_RADIUS = 22
+const GRID_W = 8 * CELL_SIZE
+const GRID_H = 8 * CELL_SIZE
 
 export function createUnit(template, level, row, col, team, id) {
   const stats = calcStats(template, level)
@@ -124,6 +127,35 @@ function updateHealer(unit, allies, deltaTime) {
       if (Math.abs(my) > Math.abs(dy)) unit.y = target.y
       else unit.y += my
     }
+  }
+}
+
+export function resolveCollisions(units) {
+  const alive = units.filter(u => u.alive)
+  for (let i = 0; i < alive.length; i++) {
+    for (let j = i + 1; j < alive.length; j++) {
+      const a = alive[i]
+      const b = alive[j]
+      const dx = b.x - a.x
+      const dy = b.y - a.y
+      const distSq = dx * dx + dy * dy
+      const minDist = COLLISION_RADIUS * 2
+      if (distSq < minDist * minDist && distSq > 0.01) {
+        const dist = Math.sqrt(distSq)
+        const overlap = (minDist - dist) / 2
+        const nx = dx / dist
+        const ny = dy / dist
+        a.x -= nx * overlap
+        a.y -= ny * overlap
+        b.x += nx * overlap
+        b.y += ny * overlap
+      }
+    }
+  }
+
+  for (const u of alive) {
+    u.x = Math.max(COLLISION_RADIUS, Math.min(GRID_W - COLLISION_RADIUS, u.x))
+    u.y = Math.max(COLLISION_RADIUS, Math.min(GRID_H - COLLISION_RADIUS, u.y))
   }
 }
 
