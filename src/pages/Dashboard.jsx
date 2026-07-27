@@ -4,6 +4,13 @@ import { useAuth } from '../context/AuthContext'
 
 const tools = [
   {
+    id: 'arena',
+    name: 'Arena Battles',
+    description: 'Hire mercenaries, fight zombies in real-time auto-battles. Level up and conquer arenas.',
+    to: '/game/arenas',
+    icon: '⚔️',
+  },
+  {
     id: 'achievements',
     name: 'Achievement Tracker',
     description: 'Log your wins, rate how they made you feel, and see patterns in your satisfaction.',

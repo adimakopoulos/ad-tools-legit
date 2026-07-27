@@ -13,6 +13,8 @@ import StoicQuotesPage from './pages/StoicQuotesPage'
 import AdminPage from './pages/AdminPage'
 import LifeGoalsPage from './pages/LifeGoalsPage'
 import TalkIssuesPage from './pages/TalkIssuesPage'
+import ArenaPage from './game/pages/ArenaPage'
+import BarracksPage from './game/pages/BarracksPage'
 
 export default function App() {
   const [masterKey, setMasterKey] = useState(null)
@@ -126,6 +128,27 @@ export default function App() {
   }
 />
 
+
+        <Route
+          path="/game/arenas"
+          element={
+            <ProtectedRoute>
+              <Layout vaultUnlocked={vaultUnlocked}>
+                <ArenaPage />
+              </Layout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/game/barracks"
+          element={
+            <ProtectedRoute>
+              <Layout vaultUnlocked={vaultUnlocked}>
+                <BarracksPage />
+              </Layout>
+            </ProtectedRoute>
+          }
+        />
 
         <Route path="*" element={<Navigate to="/dashboard" replace />} />
       </Routes>
