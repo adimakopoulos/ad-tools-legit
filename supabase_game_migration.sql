@@ -35,6 +35,7 @@ create table if not exists public.player_progress (
   user_id             uuid not null references auth.users(id) on delete cascade unique,
   level               int not null default 1,
   total_xp            int not null default 0,
+  gold                int not null default 200,
   highest_arena       int not null default 0
 );
 

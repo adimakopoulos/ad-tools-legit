@@ -1,5 +1,5 @@
 import React from 'react'
-import { calcXpReward } from '../engine/StatsCalculator'
+import { calcXpReward, calcGoldReward } from '../engine/StatsCalculator'
 
 export default function BattleResults({ result, arena, onRetry, onNextArena, hasNextArena }) {
   if (!result) return null
@@ -10,6 +10,7 @@ export default function BattleResults({ result, arena, onRetry, onNextArena, has
     result.totalMercs,
     result.won
   )
+  const goldGained = calcGoldReward(arena.difficulty, result.won)
 
   return (
     <div className="glass rounded-3xl p-6 text-center">
@@ -26,6 +27,10 @@ export default function BattleResults({ result, arena, onRetry, onNextArena, has
         <div>
           <div className="text-slate-400">XP Earned</div>
           <div className="text-lg font-semibold text-amber-400">+{xpGained}</div>
+        </div>
+        <div>
+          <div className="text-slate-400">Gold Earned</div>
+          <div className="text-lg font-semibold text-amber-400">+{goldGained}</div>
         </div>
         <div>
           <div className="text-slate-400">Time</div>

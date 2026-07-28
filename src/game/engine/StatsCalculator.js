@@ -25,6 +25,11 @@ export function calcXpReward(arenaDifficulty, mercsAlive, totalMercs, won) {
   return base
 }
 
+export function calcGoldReward(arenaDifficulty, won) {
+  if (!won) return 5 + arenaDifficulty * 3
+  return 15 + arenaDifficulty * 10
+}
+
 export function xpForLevel(level) {
   return 50 * level * (level + 1)
 }

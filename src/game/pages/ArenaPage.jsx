@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
 import { supabase } from '../../supabaseClient'
 import { ARENAS, generateEnemies } from '../data/arenas'
@@ -6,7 +7,7 @@ import { getTemplate } from '../data/mercenaryTemplates'
 import { usePlayerRoster } from '../hooks/usePlayerRoster'
 import { usePlayerProgress } from '../hooks/usePlayerProgress'
 import { useGame } from '../hooks/useGame'
-import { calcXpReward } from '../engine/StatsCalculator'
+import { calcXpReward, calcGoldReward } from '../engine/StatsCalculator'
 import { CELL_SIZE, renderGrid, renderUnitOnGrid, renderPlacedUnit } from '../engine/Renderer'
 import GameCanvas from '../components/GameCanvas'
 import TeamRoster from '../components/TeamRoster'
@@ -16,10 +17,11 @@ import BattleResults from '../components/BattleResults'
 const MAX_PLACE = 5
 
 export default function ArenaPage() {
+  const navigate = useNavigate()
   const { session } = useAuth()
   const placementCanvasRef = useRef(null)
   const { roster } = usePlayerRoster()
-  const { progress, addXp, unlockArena } = usePlayerProgress()
+  const { progress, addXp, addGold, unlockArena } = usePlayerProgress()
   const { battleRef, startBattle, cleanup } = useGame(placementCanvasRef)
 
   const [phase, setPhase] = useState('select')
@@ -197,6 +199,7 @@ export default function ArenaPage() {
           playerUnits.length,
           battle.won
         )
+        const goldGained = calcGoldReward(selectedArena.difficulty, battle.won)
 
         setSaving(true)
         try {
@@ -210,6 +213,7 @@ export default function ArenaPage() {
             })
 
             await addXp(xpGained)
+            await addGold(goldGained)
 
             if (battle.won) {
               await unlockArena(selectedArena.id)
@@ -235,7 +239,7 @@ export default function ArenaPage() {
     }, 150)
 
     return () => clearInterval(id)
-  }, [phase, selectedArena, addXp, unlockArena, battleRef, session, roster])
+  }, [phase, selectedArena, addXp, addGold, unlockArena, battleRef, session, roster])
 
   const handleRetry = useCallback(() => {
     cleanup()
@@ -256,7 +260,15 @@ export default function ArenaPage() {
   if (phase === 'select') {
     return (
       <div className="mt-6">
-        <h1 className="text-3xl font-semibold tracking-tight mb-6 text-slate-200">Arenas</h1>
+        <div className="flex items-center gap-3 mb-6">
+          <button
+            onClick={() => navigate('/game')}
+            className="text-xs text-slate-400 hover:text-slate-200 transition-colors"
+          >
+            &larr; Game Menu
+          </button>
+          <h1 className="text-2xl font-semibold tracking-tight text-slate-200">Arenas</h1>
+        </div>
         <ArenaSelect progress={progress} onSelect={handleSelectArena} />
       </div>
     )
@@ -267,10 +279,10 @@ export default function ArenaPage() {
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-3">
           <button
-            onClick={goBackToSelect}
+            onClick={() => navigate('/game')}
             className="text-xs text-slate-400 hover:text-slate-200 transition-colors"
           >
-            &larr; Arenas
+            &larr; Game Menu
           </button>
           <h2 className="text-lg font-semibold text-slate-200">{selectedArena?.name}</h2>
           <div className="flex gap-0.5">
@@ -299,40 +311,38 @@ export default function ArenaPage() {
         </p>
       )}
 
-      <div className="flex gap-6 flex-wrap">
-        <div>
+      <div className={phase === 'placement' ? 'flex flex-col items-center gap-4' : 'flex justify-center'}>
+        <div className="flex justify-center">
           <GameCanvas
             canvasRef={placementCanvasRef}
             onClick={phase === 'placement' ? handleCanvasClick : undefined}
             onContextMenu={phase === 'placement' ? handleCanvasRightClick : undefined}
-            style={{ width: '500px', height: '500px' }}
+            style={{ width: 'min(85vw, 560px)', height: 'min(85vw, 560px)' }}
           />
         </div>
 
-        <div className="flex-1 min-w-[240px] max-w-[320px]">
-          {phase === 'placement' && (
-            <>
-              <TeamRoster
-                roster={roster}
-                selectedMercId={selectedMercId}
-                onSelect={setSelectedMercId}
-                placedCount={placedMercs.length}
-                maxPlace={MAX_PLACE}
-              />
-              <button
-                onClick={handleStartBattle}
-                disabled={placedMercs.length === 0}
-                className={`mt-4 w-full py-3 rounded-xl text-sm font-semibold transition-all ${
-                  placedMercs.length === 0
-                    ? 'bg-slate-700 text-slate-500 cursor-not-allowed'
-                    : 'bg-sky-600 hover:bg-sky-500 text-white'
-                }`}
-              >
-                Start Battle
-              </button>
-            </>
-          )}
-        </div>
+        {phase === 'placement' && (
+          <div className="w-full max-w-[640px]">
+            <TeamRoster
+              roster={roster}
+              selectedMercId={selectedMercId}
+              onSelect={setSelectedMercId}
+              placedCount={placedMercs.length}
+              maxPlace={MAX_PLACE}
+            />
+            <button
+              onClick={handleStartBattle}
+              disabled={placedMercs.length === 0}
+              className={`mt-3 w-full py-3 rounded-xl text-sm font-semibold transition-all ${
+                placedMercs.length === 0
+                  ? 'bg-slate-700 text-slate-500 cursor-not-allowed'
+                  : 'bg-sky-600 hover:bg-sky-500 text-white'
+              }`}
+            >
+              Start Battle
+            </button>
+          </div>
+        )}
       </div>
 
       {phase === 'result' && battleResult && (

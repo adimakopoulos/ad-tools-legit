@@ -13,8 +13,10 @@ import StoicQuotesPage from './pages/StoicQuotesPage'
 import AdminPage from './pages/AdminPage'
 import LifeGoalsPage from './pages/LifeGoalsPage'
 import TalkIssuesPage from './pages/TalkIssuesPage'
+import GameHub from './game/pages/GameHub'
 import ArenaPage from './game/pages/ArenaPage'
 import BarracksPage from './game/pages/BarracksPage'
+import ShopPage from './game/pages/ShopPage'
 
 export default function App() {
   const [masterKey, setMasterKey] = useState(null)
@@ -129,6 +131,26 @@ export default function App() {
 />
 
 
+        <Route
+          path="/game"
+          element={
+            <ProtectedRoute>
+              <Layout vaultUnlocked={vaultUnlocked}>
+                <GameHub />
+              </Layout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/game/shop"
+          element={
+            <ProtectedRoute>
+              <Layout vaultUnlocked={vaultUnlocked}>
+                <ShopPage />
+              </Layout>
+            </ProtectedRoute>
+          }
+        />
         <Route
           path="/game/arenas"
           element={

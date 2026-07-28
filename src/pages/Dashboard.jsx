@@ -7,7 +7,7 @@ const tools = [
     id: 'arena',
     name: 'Arena Battles',
     description: 'Hire mercenaries, fight zombies in real-time auto-battles. Level up and conquer arenas.',
-    to: '/game/arenas',
+    to: '/game',
     icon: '⚔️',
   },
   {
