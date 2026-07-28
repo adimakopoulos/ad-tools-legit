@@ -42,7 +42,7 @@ export default function BattleResults({ result, arena, onRetry, onNextArena, has
         <button onClick={onRetry} className="btn-primary text-sm px-5 py-2 rounded-xl">
           Retry
         </button>
-        {hasNextArena && (
+        {result.won && hasNextArena && (
           <button onClick={onNextArena} className="btn-primary text-sm px-5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500">
             Next Arena
           </button>

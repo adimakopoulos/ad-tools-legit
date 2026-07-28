@@ -2,7 +2,7 @@ import React from 'react'
 import { MERCENARY_TEMPLATES } from '../data/mercenaryTemplates'
 import { calcStats, xpForLevel } from '../engine/StatsCalculator'
 
-export default function TeamRoster({ roster, selectedMercId, onSelect, placedCount, maxPlace }) {
+export default function TeamRoster({ roster, selectedMercId, onSelect, placedCount, maxPlace, deployedIds }) {
   return (
     <div className="glass rounded-3xl p-4">
       <div className="flex items-center justify-between mb-3">
@@ -15,16 +15,19 @@ export default function TeamRoster({ roster, selectedMercId, onSelect, placedCou
           if (!template) return null
           const stats = calcStats(template, pm.level)
           const isSelected = selectedMercId === pm.id
+          const isDeployed = deployedIds?.includes(pm.id)
           const nextLevelXp = xpForLevel(pm.level)
 
           return (
             <div
               key={pm.id}
-              onClick={() => onSelect(pm.id)}
-              className={`rounded-2xl p-3 cursor-pointer transition-all shrink-0 w-[160px] ${
-                isSelected
-                  ? 'bg-sky-500/20 ring-2 ring-sky-400'
-                  : 'bg-slate-800/50 hover:bg-slate-700/50'
+              onClick={() => !isDeployed && onSelect(pm.id)}
+              className={`rounded-2xl p-3 transition-all shrink-0 w-[160px] ${
+                isDeployed
+                  ? 'bg-slate-800/20 opacity-40 cursor-not-allowed'
+                  : isSelected
+                  ? 'bg-sky-500/20 ring-2 ring-sky-400 cursor-pointer'
+                  : 'bg-slate-800/50 hover:bg-slate-700/50 cursor-pointer'
               }`}
             >
               <div className="flex items-center gap-2 mb-2">

@@ -132,6 +132,8 @@ export default function ArenaPage() {
     const selectedMerc = roster.find(pm => pm.id === selectedMercId)
     if (!selectedMerc) return
 
+    if (placedMercs.some(p => p.id === selectedMerc.id)) return
+
     setPlacedMercs(prev => [...prev, {
       id: selectedMerc.id,
       templateId: selectedMerc.template_id,
@@ -329,6 +331,7 @@ export default function ArenaPage() {
               onSelect={setSelectedMercId}
               placedCount={placedMercs.length}
               maxPlace={MAX_PLACE}
+              deployedIds={placedMercs.map(p => p.id)}
             />
             <button
               onClick={handleStartBattle}
