@@ -26,8 +26,25 @@ export function calcGoldReward(arenaDifficulty, won) {
   return 15 + arenaDifficulty * 10
 }
 
+export const MAX_LEVEL = 10
+
 export function xpForLevel(level) {
   return 50 * level * (level + 1)
+}
+
+export function levelInfo(xp) {
+  let level = 1
+  let remaining = Math.max(0, Math.floor(Number(xp) || 0))
+  while (level < MAX_LEVEL && remaining >= xpForLevel(level)) {
+    remaining -= xpForLevel(level)
+    level++
+  }
+  return {
+    level,
+    xpIntoLevel: remaining,
+    xpForNext: level < MAX_LEVEL ? xpForLevel(level) : 0,
+    isMaxLevel: level >= MAX_LEVEL,
+  }
 }
 
 export function calcXpPerKill(enemyLevel) {

@@ -1,6 +1,6 @@
 import React from 'react'
 import { MERCENARY_TEMPLATES } from '../data/mercenaryTemplates'
-import { calcStats, xpForLevel } from '../engine/StatsCalculator'
+import { calcStats, levelInfo } from '../engine/StatsCalculator'
 
 export default function TeamRoster({ roster, selectedMercId, onSelect, placedCount, maxPlace, deployedIds }) {
   return (
@@ -13,10 +13,11 @@ export default function TeamRoster({ roster, selectedMercId, onSelect, placedCou
         {roster.map(pm => {
           const template = MERCENARY_TEMPLATES.find(t => t.id === pm.template_id)
           if (!template) return null
-          const stats = calcStats(template, pm.level)
+          const info = levelInfo(pm.xp)
+          const level = info.level
+          const stats = calcStats(template, level)
           const isSelected = selectedMercId === pm.id
           const isDeployed = deployedIds?.includes(pm.id)
-          const nextLevelXp = xpForLevel(pm.level)
 
           return (
             <div
@@ -39,7 +40,7 @@ export default function TeamRoster({ roster, selectedMercId, onSelect, placedCou
                 </div>
                 <div className="min-w-0">
                   <div className="text-sm font-medium text-slate-200 truncate">{template.name}</div>
-                  <div className="text-xs text-sky-300">Lv.{pm.level}</div>
+                  <div className="text-xs text-sky-300">Lv.{level}</div>
                 </div>
               </div>
               <div className="flex gap-2 text-xs text-slate-400">
@@ -50,11 +51,11 @@ export default function TeamRoster({ roster, selectedMercId, onSelect, placedCou
                 <span>DEF {stats.def}</span>
                 <span>SPD {stats.speed}</span>
               </div>
-              {pm.level < 10 && (
+              {!info.isMaxLevel && (
                 <div className="mt-2 w-full bg-slate-700 rounded-full h-1">
                   <div
                     className="bg-sky-400 h-1 rounded-full transition-all"
-                    style={{ width: `${(pm.xp / nextLevelXp) * 100}%` }}
+                    style={{ width: `${Math.min(100, (info.xpIntoLevel / info.xpForNext) * 100)}%` }}
                   />
                 </div>
               )}

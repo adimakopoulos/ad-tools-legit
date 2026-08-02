@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { supabase } from '../../supabaseClient'
 import { useAuth } from '../../context/AuthContext'
 import { MERCENARY_TEMPLATES } from '../data/mercenaryTemplates'
+import { levelInfo } from '../engine/StatsCalculator'
 
 const STARTER_MERCS = []
 
@@ -37,10 +38,17 @@ export function usePlayerRoster() {
           return
         }
 
-        const merged = data.map(pm => ({
-          ...pm,
-          template: MERCENARY_TEMPLATES.find(t => t.id === pm.template_id),
-        }))
+        const merged = data.map(pm => {
+          const level = levelInfo(pm.xp).level
+          if (level !== pm.level) {
+            supabase.from('player_mercenaries').update({ level }).eq('id', pm.id).then(() => {})
+          }
+          return {
+            ...pm,
+            level,
+            template: MERCENARY_TEMPLATES.find(t => t.id === pm.template_id),
+          }
+        })
         if (!cancelled) setRoster(merged)
       } catch (err) {
         console.error('Failed to load roster:', err)

@@ -7,7 +7,7 @@ import { getTemplate } from '../data/mercenaryTemplates'
 import { usePlayerRoster } from '../hooks/usePlayerRoster'
 import { usePlayerProgress } from '../hooks/usePlayerProgress'
 import { useGame } from '../hooks/useGame'
-import { calcXpPerKill, calcGoldReward } from '../engine/StatsCalculator'
+import { calcXpPerKill, calcGoldReward, levelInfo } from '../engine/StatsCalculator'
 import { CELL_SIZE, renderGrid, renderUnitOnGrid, renderPlacedUnit } from '../engine/Renderer'
 import GameCanvas from '../components/GameCanvas'
 import TeamRoster from '../components/TeamRoster'
@@ -137,7 +137,7 @@ export default function ArenaPage() {
     setPlacedMercs(prev => [...prev, {
       id: selectedMerc.id,
       templateId: selectedMerc.template_id,
-      level: selectedMerc.level,
+      level: levelInfo(selectedMerc.xp).level,
       row,
       col,
     }])
@@ -227,9 +227,10 @@ export default function ArenaPage() {
               const found = roster.find(r => r.id === pm.id)
               if (found) {
                 const newXp = (found.xp || 0) + xpPerMerc
+                const newLevel = levelInfo(newXp).level
                 await supabase
                   .from('player_mercenaries')
-                  .update({ xp: newXp })
+                  .update({ xp: newXp, level: newLevel })
                   .eq('id', found.id)
               }
             }
