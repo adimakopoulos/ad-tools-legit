@@ -1,16 +1,12 @@
-const LEVEL_HP_SCALE = 12
-const LEVEL_ATK_SCALE = 3
-const LEVEL_DEF_SCALE = 2
-const LEVEL_SPEED_SCALE = 2
-
 export function calcStats(template, level) {
+  const scale = 1 + 0.01 * (level - 1)
   return {
-    hp: Math.round(template.baseHp + LEVEL_HP_SCALE * (level - 1)),
-    maxHp: Math.round(template.baseHp + LEVEL_HP_SCALE * (level - 1)),
-    atk: Math.round(template.baseAtk + LEVEL_ATK_SCALE * (level - 1)),
-    def: Math.round(template.baseDef + LEVEL_DEF_SCALE * (level - 1)),
+    hp: Math.round(template.baseHp * scale),
+    maxHp: Math.round(template.baseHp * scale),
+    atk: Math.round(template.baseAtk * scale),
+    def: Math.round(template.baseDef * scale),
     range: template.baseRange,
-    speed: template.baseSpeed + LEVEL_SPEED_SCALE * (level - 1),
+    speed: Math.round(template.baseSpeed * scale),
   }
 }
 
@@ -32,4 +28,8 @@ export function calcGoldReward(arenaDifficulty, won) {
 
 export function xpForLevel(level) {
   return 50 * level * (level + 1)
+}
+
+export function calcXpPerKill(enemyLevel) {
+  return xpForLevel(Math.max(1, enemyLevel - 1))
 }

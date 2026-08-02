@@ -14,6 +14,7 @@ export function createUnit(template, level, row, col, team, id) {
     type: template.type,
     team,
     color: template.color,
+    level,
     stats,
     row,
     col,

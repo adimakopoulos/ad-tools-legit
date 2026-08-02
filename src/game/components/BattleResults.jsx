@@ -1,15 +1,10 @@
 import React from 'react'
-import { calcXpReward, calcGoldReward } from '../engine/StatsCalculator'
+import { calcGoldReward } from '../engine/StatsCalculator'
 
 export default function BattleResults({ result, arena, onRetry, onNextArena, hasNextArena }) {
   if (!result) return null
 
-  const xpGained = calcXpReward(
-    arena.difficulty,
-    result.totalMercs - result.mercsLost,
-    result.totalMercs,
-    result.won
-  )
+  const xpGained = result.xpGained ?? 0
   const goldGained = calcGoldReward(arena.difficulty, result.won)
 
   return (

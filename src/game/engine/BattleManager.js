@@ -6,18 +6,18 @@ export const GRID_COLS = 8
 
 export function createBattle(placedMercs, arenaEnemies) {
   const units = []
-  let id = 0
+  let enemyId = -1
 
   for (const pm of placedMercs) {
     const template = getTemplate(pm.templateId)
     if (!template) continue
-    units.push(createUnit(template, pm.level, pm.row, pm.col, 'player', id++))
+    units.push(createUnit(template, pm.level, pm.row, pm.col, 'player', pm.id))
   }
 
   for (const ae of arenaEnemies) {
     const template = getTemplate(ae.templateId)
     if (!template) continue
-    units.push(createUnit(template, ae.level, ae.row, ae.col, 'enemy', id++))
+    units.push(createUnit(template, ae.level, ae.row, ae.col, 'enemy', enemyId--))
   }
 
   return { units, finished: false, won: false, elapsed: 0 }

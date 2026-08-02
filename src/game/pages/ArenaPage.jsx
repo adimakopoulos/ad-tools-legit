@@ -7,7 +7,7 @@ import { getTemplate } from '../data/mercenaryTemplates'
 import { usePlayerRoster } from '../hooks/usePlayerRoster'
 import { usePlayerProgress } from '../hooks/usePlayerProgress'
 import { useGame } from '../hooks/useGame'
-import { calcXpReward, calcGoldReward } from '../engine/StatsCalculator'
+import { calcXpPerKill, calcGoldReward } from '../engine/StatsCalculator'
 import { CELL_SIZE, renderGrid, renderUnitOnGrid, renderPlacedUnit } from '../engine/Renderer'
 import GameCanvas from '../components/GameCanvas'
 import TeamRoster from '../components/TeamRoster'
@@ -184,23 +184,21 @@ export default function ArenaPage() {
 
         const playerUnits = battle.units.filter(u => u.team === 'player')
         const aliveUnits = playerUnits.filter(u => u.alive)
+        const deadEnemies = battle.units.filter(u => u.team === 'enemy' && !u.alive)
+
+        const totalXpFromKills = deadEnemies.reduce((sum, e) => sum + calcXpPerKill(e.level), 0)
 
         const result = {
           won: battle.won,
           mercsLost: playerUnits.length - aliveUnits.length,
           totalMercs: playerUnits.length,
           elapsed: battle.elapsed,
+          xpGained: totalXpFromKills,
         }
 
         setBattleResult(result)
         setPhase('result')
 
-        const xpGained = calcXpReward(
-          selectedArena.difficulty,
-          aliveUnits.length,
-          playerUnits.length,
-          battle.won
-        )
         const goldGained = calcGoldReward(selectedArena.difficulty, battle.won)
 
         setSaving(true)
@@ -211,24 +209,28 @@ export default function ArenaPage() {
               arena_id: selectedArena.id,
               won: battle.won,
               mercs_lost: playerUnits.length - aliveUnits.length,
-              xp_gained: xpGained,
+              xp_gained: totalXpFromKills,
             })
 
-            await addXp(xpGained)
+            await addXp(totalXpFromKills)
             await addGold(goldGained)
 
             if (battle.won) {
               await unlockArena(selectedArena.id)
+            }
 
-              for (const unit of aliveUnits) {
-                const found = roster.find(r => r.id === unit.id)
-                if (found) {
-                  const newXp = (found.xp || 0) + Math.round(xpGained * 0.5)
-                  await supabase
-                    .from('player_mercenaries')
-                    .update({ xp: newXp })
-                    .eq('id', found.id)
-                }
+            const xpPerMerc = placedMercs.length > 0
+              ? Math.round(totalXpFromKills / placedMercs.length)
+              : 0
+
+            for (const pm of placedMercs) {
+              const found = roster.find(r => r.id === pm.id)
+              if (found) {
+                const newXp = (found.xp || 0) + xpPerMerc
+                await supabase
+                  .from('player_mercenaries')
+                  .update({ xp: newXp })
+                  .eq('id', found.id)
               }
             }
           }
@@ -241,7 +243,7 @@ export default function ArenaPage() {
     }, 150)
 
     return () => clearInterval(id)
-  }, [phase, selectedArena, addXp, addGold, unlockArena, battleRef, session, roster])
+  }, [phase, selectedArena, addXp, addGold, unlockArena, battleRef, session, roster, placedMercs])
 
   const handleRetry = useCallback(() => {
     cleanup()
